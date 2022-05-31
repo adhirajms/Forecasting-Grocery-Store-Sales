@@ -1,0 +1,245 @@
+---
+title: "Time Series Project Data Assembly & EDA"
+author: "Adhiraj Maheshwari Srivastava"
+date: "25/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importing Libraries
+```{r}
+library(forecast)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+library(TSA)
+library(Metrics)
+library(tidyverse)
+library(lubridate)
+```
+
+## Reading in the Data
+```{r}
+filePath <- "/Users/adhirajsrivastava/Desktop/Studies/UChicago/Spring Quarter 2022/Time Series Analysis & Forecasting/Final Project/store-sales-time-series-forecasting/"
+train.Name <- "train.csv"
+test.Name <- "test.csv"
+stores.Name <- "stores.csv"
+holidays.Name <- "holidays_events.csv"
+transaction.Name <- "transactions.csv"
+
+train.df <- read.csv(paste(filePath, train.Name, sep=""))
+test.df <- read.csv(paste(filePath, test.Name, sep=""))
+stores.df <- read.csv(paste(filePath, stores.Name, sep=""))
+holidays.df <- read.csv(paste(filePath, holidays.Name, sep=""))
+transaction.df <- read.csv(paste(filePath, transaction.Name, sep=""))
+
+```
+
+## Pre-Processing 
+```{r}
+
+group.by.func <- function(df) {
+  df.group <- df %>% group_by(date, store_nbr, city, state) %>% summarise(
+    sales = sum(sales),
+    onpromotion = sum(onpromotion),
+    transaction = sum(transactions)
+  )
+  
+  return (df.group)
+}
+
+update_holidays <- function() {
+  
+  holidays.df <<- holidays.df[holidays.df$transferred=="False",]
+  holidays.df.pivot <<- pivot_wider(holidays.df, names_from="locale", values_from="locale_name")
+  
+  holidays.df.local <<- holidays.df.pivot[!is.na(holidays.df.pivot$Local),c(1,5)]
+  holidays.df.local$IsHoliday <<- rep(1, nrow(holidays.df.local))
+  
+  holidays.df.regional <<- holidays.df.pivot[!is.na(holidays.df.pivot$Regional),c(1,6)]
+  holidays.df.regional$IsHoliday <<- rep(1, nrow(holidays.df.regional))
+  
+  holidays.df.national <<- holidays.df.pivot[!is.na(holidays.df.pivot$National),c(1,7)]
+  holidays.df.national$IsHoliday <<- rep(1, nrow(holidays.df.national))
+  
+}
+
+
+main <- function(df){
+
+  df <- merge(x = df, y = stores.df, by.x = "store_nbr", by.y = "store_nbr")
+  df <- merge(x = df, y = transaction.df, by.x = c("store_nbr", "date"), by.y = c("store_nbr", "date"))
+  
+  df.group <- group.by.func(df)
+  
+  df.group <- merge(x = df.group, y = holidays.df.local, by.x = c("date", "city"), by.y = c("date", "Local"), all.x = TRUE)
+  df.group <- merge(x = df.group, y = holidays.df.regional, by.x = c("date", "state"), by.y = c("date", "Regional"), all.x = TRUE)
+  df.group <- merge(x = df.group, y = holidays.df.national, by.x = c("date"), by.y = c("date"), all.x = TRUE)
+  
+  cols <- c("IsHoliday", "IsHoliday.x", "IsHoliday.y")
+  df.group$Holiday <- apply(df.group[cols] == 1, 1, any)
+  
+  df.group <- df.group[,c(1,4,5,6,7,12)]
+  
+  return (df.group)
+}
+
+update_holidays()
+df.group <- main(train.df)
+
+```
+
+## Step 2: EDA
+
+```{r}
+# number of stores: 54
+length(unique(df.group$store_nbr))
+
+#total number of sales: 1075377321
+sum(df.group$sales)
+
+#total number of transactions: 4683145203
+sum(df.group$transaction)
+
+#total number of promotions: 7845496
+sum(df.group$onpromotion)
+
+# average sales across all stores: 12847.54
+sales.all=mean(df.group$sales)
+sales.all
+
+# average number of promotions held across all stores: 93.73016
+promotions.all=mean(df.group$onpromotion)
+promotions.all
+
+# average number of transactions across all stores: 55949.55
+transactions.all=mean(df.group$transaction)
+transactions.all
+
+#number of days holidays/events take place: 300
+length(unique(holidays.df$date))
+
+```
+
+Understanding the different types of holidays
+```{r}
+holiday_type_counts <- 
+  holidays.df %>%                              
+  group_by(locale) %>%
+  summarise(count = n_distinct(date))
+holiday_type_counts 
+```
+
+```{r}
+x=barplot(holiday_type_counts$count, names.arg=holiday_type_counts$locale, xlab='Type', ylab='Count', 
+        main='Type of Holidays', col=c('#567572FF', '#964F4CFF', '#696667FF'), border = 'black')
+text(x, holiday_type_counts$count-5,labels=as.character(holiday_type_counts$count))
+```
+
+
+
+
+We will be only looking at the top 5 stores based on sales 
+
+```{r}
+group.by.sales <- df.group %>% group_by(store_nbr) %>% summarise(sales=sum(sales))
+top.5.stores <- head(group.by.sales[order(group.by.sales$sales, decreasing = T),],5)$store_nbr
+
+df.group.top5 <- filter(df.group, store_nbr %in% as.vector(top.5.stores))
+```
+
+Calculating basic facts for the top 5 stores
+```{r}
+# average sales across 5 stores: 12847.54
+sales.5=mean(df.group.top5$sales)
+sales.5
+
+# average number of promotions held across 5 stores: 93.73016
+promotions.5=mean(df.group.top5$onpromotion)
+promotions.5
+
+# average number of transactions across 5 stores: 55949.55
+transactions.5=mean(df.group.top5$transaction)
+transactions.5
+```
+
+Making a few comparison graphs for avg number sales, avg number, of promotions across stores and the avg number of transactions
+
+```{r}
+names=c('All Stores', 'Top 5 Stores in Sales')
+sales.comparison=c(sales.all, sales.5)
+transaction.comparison=c(transactions.all, transactions.5)
+promotion.comparison=c(promotions.all, promotions.5)
+```
+
+
+```{r}
+x1=barplot(sales.comparison, names.arg=names, xlab='Stores', ylab='Sales', 
+        main='Average Number of Sales', col=c('#00203FFF', '#ADEFD1FF'), border = 'black')
+text(x1, sales.comparison-1000,labels=as.character(sales.comparison))
+
+
+x2=barplot(transaction.comparison, names.arg=names, xlab='Stores', ylab='Transactions', 
+        main='Average Number of Transactions', col=c('#00A4CCFF', '#F95700FF'), border = 'black')
+text(x2, transaction.comparison-5000,labels=as.character(transaction.comparison))
+
+
+x3=barplot(promotion.comparison, names.arg=names, xlab='Stores', ylab='Promotions', 
+        main='Average Number of Promotions', col=c('#949398FF', '#F4DF4EFF'), border = 'black')
+text(x3, promotion.comparison-20,labels=as.character(promotion.comparison))
+```
+
+Plotting the sales of the top 5 stores across time
+```{r}
+
+par(mfrow=c(5,1))
+
+df.group.top5$date <- as.Date(df.group.top5$date)
+
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[1],], aes(x = date, y = sales, group=1)) +
+  geom_line() + labs(title="Sales of Store 44")
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[2],], aes(x = date, y = sales, group=1)) +
+  geom_line() + labs(title="Sales of Store 45")
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[3],], aes(x = date, y = sales, group=1)) +
+  geom_line() + labs(title="Sales of Store 47")
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[4],], aes(x = date, y = sales, group=1)) +
+  geom_line() + labs(title="Sales of Store 3")
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[5],], aes(x = date, y = sales, group=1)) +
+  geom_line() + labs(title="Sales of Store 49")
+
+```
+
+
+Plotting the transactions of the top 5 stores across time
+```{r}
+
+par(mfrow=c(5,1))
+
+df.group.top5$date <- as.Date(df.group.top5$date)
+
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[1],], aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 44")
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[2],], aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 45")
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[3],], aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 45")
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[4],], aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 3")
+
+ggplot(df.group.top5[df.group.top5$store_nbr == as.vector(top.5.stores)[5],], aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 49")
+
+```
