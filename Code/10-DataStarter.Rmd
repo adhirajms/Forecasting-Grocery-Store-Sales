@@ -1,0 +1,96 @@
+---
+title: "Time Series Analysis & Forecasting- Final Project"
+author: "Adhiraj Maheshwari Srivastava"
+date: "19/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importing Libraries
+
+```{r}
+library(tseries)
+library(forecast)
+library(TSA)
+library(fracdiff)
+library(car)
+library(dplyr)
+library(xts)
+library(zoo)
+library(ggplot2)
+```
+
+## Reading the Data
+
+For each of the datasets, we add a date column at the start
+
+```{r}
+wd <- getwd()
+wd <- substr(wd, 1, nchar(wd)-5)
+filePath <- paste(wd, "/Data/", sep="")
+
+train.Name <- "train.csv"
+test.Name <- "test.csv"
+stores.Name <- "stores.csv"
+holidays.Name <- "holidays_events.csv"
+transaction.Name <- "transactions.csv"
+oil.Name <- "oil.csv"
+
+train <- read.csv(paste(filePath, train.Name, sep=""))
+stores <- read.csv(paste(filePath, stores.Name, sep=""))
+holidays_events <- read.csv(paste(filePath, holidays.Name, sep=""))
+transaction <- read.csv(paste(filePath, transaction.Name, sep=""))
+oil <- read.csv(paste(filePath, oil.Name, sep=""))
+test <- read.csv(paste(filePath, test.Name, sep=""))
+```
+
+
+```{r}
+train_grouped = train %>% group_by(date, store_nbr) %>%
+                   summarise(sales = sum(sales),
+                             onpromotion = sum(onpromotion),
+                             .groups = 'drop')
+ 
+View(train_grouped)
+```
+
+Joining the Datasets
+```{r}
+df = merge(train_grouped, stores, by="store_nbr")
+df1=merge(df, transaction, by=c("store_nbr","date"))
+```
+
+```{r}
+lapply(df1, function(x) {length((which(is.na(x))))})
+summary(df1)
+```
+
+```{r}
+store_grouped = df1 %>% group_by(store_nbr) %>%
+                   summarise(sales = sum(sales),
+                             transactions = sum(transactions),
+                             .groups = 'drop')
+ 
+View(store_grouped)
+```
+
+We take the top 5 stores in terms of sales (3,44,45,47,49)
+
+```{r}
+top.5.stores <- head(store_grouped[order(store_grouped$sales, decreasing = T),],5)$store_nbr
+
+df2 <- filter(df1, store_nbr %in% as.vector(top.5.stores))
+```
+
+```{r}
+df2$date=as.Date(df2$date)
+```
+
+```{r}
+# saving csv file 
+#wrte.csv(df2, filePath)
+
+```

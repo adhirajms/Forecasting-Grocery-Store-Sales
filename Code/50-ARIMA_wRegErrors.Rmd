@@ -1,0 +1,207 @@
+---
+title: "Regression with ARIMA Errors/Dynamic Regression"
+author: "Michelle Tang"
+date: "05/29/2022"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(forecast)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+library(Metrics)
+library(xts)
+library(tseries)
+```
+
+```{r}
+wd <- getwd()
+wd <- substr(wd, 1, nchar(wd)-5)
+filePath <- paste(wd, "/Data/", sep="")
+
+df.Name <- "Final_Data.csv"
+oil.name <- "oil.csv"
+
+oil.df<-read.csv(paste(filePath, oil.name, sep=""))
+df.group <- read.csv(paste(filePath, df.Name, sep=""))
+```
+
+##Interpolating Oil Values 
+```{r}
+#to use as exogenous variable
+library(anytime)
+oil.df$date<- anydate(paste(oil.df$date, sep="-"))
+daily = seq(oil.df$date[1], tail(oil.df$date,1), by="day")
+oil.df2 = data.frame(date=daily, oilsale=spline(oil.df, method="fmm", xout=daily)$y)
+oil_xts <- as.xts(oil.df2$oilsale, order.by=as.Date(oil.df2$date))
+weekly.oil<- apply.weekly(oil_xts, 'sum')
+weekly.oil<-weekly.oil[1:242]
+```
+
+##Aggregating stores by weeks
+```{r}
+library(dplyr)
+store3_df <- df.group %>% filter(store_nbr == 3)
+store44_df <- df.group %>% filter(store_nbr == 44)
+store45_df <- df.group %>% filter(store_nbr == 45)
+store47_df <- df.group %>% filter(store_nbr == 47)
+store49_df <- df.group %>% filter(store_nbr == 49)
+
+store3_xts <-as.xts(store3_df$sales, order.by=as.Date(store3_df$date))
+weekly.store_3<- apply.weekly(store3_xts, 'sum')
+
+store44_xts <- as.xts(store44_df$sales, order.by=as.Date(store44_df$date))
+weekly.store_44<- apply.weekly(store44_xts, 'sum')
+
+store45_xts <- as.xts(store45_df$sales, order.by=as.Date(store45_df$date))
+weekly.store_45<- apply.weekly(store45_xts, 'sum')
+
+store47_xts <- as.xts(store47_df$sales, order.by=as.Date(store47_df$date))
+weekly.store_47<- apply.weekly(store47_xts, 'sum')
+
+store49_xts <- as.xts(store49_df$sales, order.by=as.Date(store49_df$date))
+weekly.store_49<- apply.weekly(store49_xts, 'sum')
+```
+
+##Checking to see if differencing will make the TS stationary
+```{r}
+#the xreg component needs to be stationary to do dynamic regression 
+plot(weekly.oil)
+diff1.oil<-diff(weekly.oil)
+plot(diff1.oil)
+kpss.test(diff1.oil)
+
+plot(weekly.store_3)
+diff1.store3<-diff(weekly.store_3)
+plot(diff1.store3)
+kpss.test(diff1.store3)
+
+diff1.store44 <- diff(weekly.store_44)
+kpss.test(diff1.store44)
+
+diff1.store45<- diff(weekly.store_45)
+kpss.test(diff1.store45)
+
+diff1.store47<- diff(weekly.store_47)
+kpss.test(diff1.store47)
+
+diff1.store49<- diff(weekly.store_49)
+kpss.test(diff1.store49)
+#both oil and store are stationary after first order differencing
+```
+##Split into Train and Test
+```{r}
+train_date<- nrow(weekly.store_3) *0.96
+store3_train <- weekly.store_3[1:train_date,]
+store3_test <- weekly.store_3[-c(1:train_date),]
+
+
+store44_train <- weekly.store_44[1:train_date,]
+store44_test <- weekly.store_44[-c(1:train_date),]
+
+store45_train <- weekly.store_45[1:train_date,]
+store45_test <- weekly.store_45[-c(1:train_date),]
+
+store47_train <- weekly.store_47[1:train_date,]
+store47_test <- weekly.store_47[-c(1:train_date),]
+
+store49_train <- weekly.store_49[1:train_date,]
+store49_test <- weekly.store_49[-c(1:train_date),]
+
+oil_train <- weekly.oil[1:train_date]
+oil_test<- weekly.oil[-c(1:train_date)]
+```
+## Regression with ARIMA Errors
+```{r}
+#not using the differenced time series in auto.arima since it takes into account that we need to difference. 
+#Store 3
+mod.store3<- auto.arima(store3_train, xreg=oil_train)
+forecast.store3<-forecast(mod.store3,xreg = oil_test, h=10)
+summary(forecast.store3)
+checkresiduals(mod.store3)
+kpss.test(mod.store3$residuals)
+acf(mod.store3$residuals)
+shapiro.test(mod.store3$residuals)
+qqnorm(mod.store3$residuals)
+qqline(mod.store3$residuals)
+autoplot(forecast.store3, ylab="Store Sales")
+rmse3<-rmse(store3_test, forecast.store3$mean)
+smape3<-smape(store3_test, forecast.store3$mean)
+```
+```{r}
+#Store 44
+mod.store44<- auto.arima(store44_train,xreg=oil_train)
+forecast.store44<-forecast(mod.store44,xreg = oil_test, h=10)
+summary(forecast.store44)
+checkresiduals(mod.store44)
+kpss.test(mod.store44$residuals)
+acf(mod.store44$residuals)
+shapiro.test(mod.store44$residuals)
+qqnorm(mod.store44$residuals)
+qqline(mod.store44$residuals)
+autoplot(forecast.store44, ylab="Store Sales")
+rmse44<- rmse(store44_test, forecast.store44$mean)
+smape44<-smape(store44_test, forecast.store44$mean)
+```
+```{r}
+#Store 45
+mod.store45<- auto.arima(store45_train,xreg=oil_train)
+forecast.store45<-forecast(mod.store45,xreg = oil_test, h=10)
+summary(forecast.store45)
+checkresiduals(mod.store45)
+kpss.test(mod.store45$residuals)
+acf(mod.store45$residuals)
+shapiro.test(mod.store45$residuals)
+qqnorm(mod.store45$residuals)
+qqline(mod.store45$residuals)
+autoplot(forecast.store45, ylab="Store Sales")
+rmse45<-rmse(store45_test, forecast.store45$mean)
+smape45<-smape(store45_test, forecast.store45$mean)
+```
+```{r}
+#Store 47
+mod.store47<- auto.arima(store47_train,xreg=oil_train)
+forecast.store47<-forecast(mod.store47,xreg = oil_test, h=10)
+summary(forecast.store47)
+checkresiduals(mod.store47)
+kpss.test(mod.store47$residuals)
+acf(mod.store47$residuals)
+shapiro.test(mod.store47$residuals)
+qqnorm(mod.store47$residuals)
+qqline(mod.store47$residuals)
+autoplot(forecast.store47, ylab="Store Sales")
+rmse47<-rmse(store47_test, forecast.store47$mean)
+smape47<-smape(store47_test, forecast.store47$mean)
+```
+```{r}
+#Store 49
+mod.store49<- auto.arima(store49_train,xreg=oil_train)
+forecast.store49<-forecast(mod.store49,xreg = oil_test, h=10)
+summary(forecast.store49)
+checkresiduals(mod.store49)
+kpss.test(mod.store49$residuals)
+acf(mod.store49$residuals)
+shapiro.test(mod.store49$residuals)
+qqnorm(mod.store49$residuals)
+qqline(mod.store49$residuals)
+autoplot(forecast.store49, ylab="Store Sales")
+rmse49<-rmse(store49_test, forecast.store49$mean)
+smape49<-smape(store49_test, forecast.store49$mean)
+```
+```{r}
+rmse_vec<-c(rmse3, rmse44, rmse45, rmse47, rmse49)
+mean(rmse_vec)
+smape_vec <- c(smape3, smape44, smape45, smape47, smape49)
+mean(smape_vec)
+names<- c("3","44","45","47","49")
+library(RColorBrewer)
+coul <- brewer.pal(5, "BuGn") 
+barplot(height=rmse_vec, names=names, col=coul,xlab="Store", ylab = "RMSE",ylim = c(0, 90000))
+barplot(height=smape_vec, names=names, col=coul,xlab="Store", ylab = "sMAPE",ylim = c(0, 0.25))
+```
+
+

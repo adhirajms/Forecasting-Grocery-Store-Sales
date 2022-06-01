@@ -1,0 +1,317 @@
+---
+title: "Hierarichial Time Series Modeling "
+author: "Priyank Shroff"
+date: "5/20/2022"
+output: 
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, results='hide', message=FALSE}
+library(forecast)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+library(tseries)
+library(TSA)
+library(Metrics)
+library(xts)
+library(anytime)
+library(hts)
+library(gridExtra)
+```
+
+```{r}
+wd <- getwd()
+wd <- substr(wd, 1, nchar(wd)-5)
+
+filePath <- paste(wd, "/Data/", sep="")
+df.Name <- "Final_Data.csv"
+
+df.group <- read.csv(paste(filePath, df.Name, sep=""))
+```
+
+
+```{r}
+
+update_df <- function(df, val) {
+  
+  df = df[df$store_nbr == val, c('date', 'sales')]
+  df = apply.weekly(as.xts(df$sales, order.by=as.Date(df$date)), 'sum')
+  
+  return (df)
+}
+
+store.44 <- update_df(df.group, 44)
+store.45 <- update_df(df.group, 45)
+store.47 <- update_df(df.group, 47)
+store.3 <- update_df(df.group, 3)
+store.49 <- update_df(df.group, 49)
+
+```
+
+```{r, fig.height=10, fig.width=10} 
+plot_acf <- function(variable, title_n) {
+  plot_v <- acf(ts(variable), plot=FALSE)
+  plot(plot_v, main='')
+  title(title_n, line = -2)
+}
+
+par(mar=c(1,1,1,1))
+par(mfrow=c(5,1))
+
+plot_acf(store.44, "ACF Plot: Store 44")
+plot_acf(store.45, "ACF Plot: Store 45")
+plot_acf(store.47, "ACF Plot: Store 47")
+plot_acf(store.3, "ACF Plot: Store 3")
+plot_acf(store.49, "ACF Plot: Store 49")
+
+```
+
+ACF plots clearly show non-stationarity. There is a gradual decline in the lag values indicating non-stationarity. 
+
+```{r}
+# conducting kpss test for each of the time series 
+
+kpss_test.func <- function(df){
+  x <- kpss.test(df)
+  
+  return (x$p.value)
+}
+
+create.table <- function(differencing){
+  
+  if (differencing == T) {
+    s44 <- kpss_test.func(diff(store.44))
+    s45 <- kpss_test.func(diff(store.45))
+    s47 <- kpss_test.func(diff(store.47))
+    s3 <- kpss_test.func(diff(store.3))
+    s49 <- kpss_test.func(diff(store.49))
+  }
+  else {
+    s44 <- kpss_test.func(store.44)
+    s45 <- kpss_test.func(store.45)
+    s47 <- kpss_test.func(store.47)
+    s3 <- kpss_test.func(store.3)
+    s49 <- kpss_test.func(store.49)
+  }
+  
+  df <- as.data.frame(cbind(s44, s45, s47, s3, s49))
+  colnames(df) <- c("Store 44", "Store 45", "Store 47", "Store 3", "Store 49")
+  
+  return (knitr::kable(df, "pipe"))
+}
+
+create.table(F) 
+```
+
+All 5 tests indicate that the time series are non-stationary.
+
+```{r}
+# differencing to make ts stationary 
+create.table(T)
+```
+
+All time series are stationary after 1st order differencing 
+
+```{r, fig.height=5, fig.width=5}
+
+par(mar=c(1,1,1,1))
+par(mfrow=c(5,1))
+
+tsdisplay(diff(store.44))
+tsdisplay(diff(store.45))
+tsdisplay(diff(store.47))
+tsdisplay(diff(store.3))
+tsdisplay(diff(store.49))
+```
+
+```{r}
+# checking if there is seasonality 
+
+s44 <- periodogram(store.44)
+1/s44$freq[which.max(s44$spec)]
+
+s45 <- periodogram(store.45)
+1/s45$freq[which.max(s45$spec)]
+
+s47 <- periodogram(store.47)
+1/s47$freq[which.max(s47$spec)]
+
+s3 <- periodogram(store.3)
+1/s3$freq[which.max(s3$spec)]
+
+s49 <- periodogram(store.49)
+1/s49$freq[which.max(s49$spec)]
+```
+
+Seasonality shows 243 which is the entire series, meaning there is no seasonality.
+
+```{r}
+# creating the dataframe for HTS 
+# no transformation 
+final.df <- as.data.frame(cbind(store.44, store.45, store.47, store.3, store.49))
+
+train.df.fin <- final.df[1:(nrow(final.df)-10),]
+test.df.fin <- final.df[(nrow(final.df)-9):nrow(final.df)-1,]
+```
+
+```{r, fig.width=15}
+mod <- hts(train.df.fin)
+summary(mod)
+smatrix(mod)
+
+plot(mod)
+```
+
+```{r, fig.width=15}
+fcst <- forecast(mod, method="bu", fmethod ="arima", h=10)
+plot(fcst, include=20, labels=T)
+
+```
+
+```{r}
+pred <- fcst$bts
+smape.val <- c()
+rmse.val <- c()
+for (i in c(1:5)) {
+  
+  actual <- test.df.fin[,i]
+  predicted <- pred[,i]
+  smape.val <<- append(smape.val, smape(actual, predicted))
+  rmse.val <<- append(rmse.val, rmse(actual, predicted))
+}
+
+```
+
+```{r}
+stores <- c(44,45,47,3,49)
+val <- data.frame(stores, smape.val, rmse.val)
+
+val 
+```
+
+```{r, fig.height=6}
+
+smape.plot <- ggplot(val, aes(x=as.character(stores), y=smape.val)) + geom_col() +
+  geom_text(aes(label = round(smape.val*100,2)), vjust = 1.5, colour = "white") +
+  labs(y="Store Number", x="SMAPE") 
+
+
+rmse.plot <- ggplot(val, aes(x=as.character(stores), y=rmse.val)) + geom_col() +
+  geom_text(aes(label = round(rmse.val,2)), vjust = 1.5, colour = "white") +
+  labs(y="Store Number", x="RMSE")
+
+grid.arrange(smape.plot, rmse.plot, ncol=2)
+```
+
+```{r, fig.height=10, fig.width=10}
+# transforming data by log 
+
+store.44.log <- log(store.44)
+store.45.log <- log(store.45)
+store.47.log <- log(store.47)
+store.3.log <- log(store.3)
+store.49.log <- log(store.49)
+
+par(mar=c(1,1,1,1))
+par(mfrow=c(5,1))
+plot(store.44.log)
+plot(store.45.log)
+plot(store.47.log)
+plot(store.3.log)
+plot(store.49.log)
+
+```
+
+```{r}
+
+final.df.2 <- as.data.frame(cbind(store.44.log, store.45.log, store.47.log, store.3.log, store.49.log))
+
+train.df.fin.2 <- final.df.2[1:(nrow(final.df.2)-10),]
+test.df.fin.2 <- final.df.2[(nrow(final.df.2)-9):nrow(final.df.2)-1,]
+
+labels.store <- c("Store 44", "Store 45", "Store 47", "Store 3", "Store 49")
+mod.1 <- hts(train.df.fin.2)
+
+plot(mod.1)
+
+```
+
+```{r}
+fcst2 <- forecast(mod.1, method="bu", fmethod ="arima", h=10)
+plot(fcst2, include=10)
+
+pred.2 <- fcst2$bts
+smape.val.2 <- c()
+rmse.val.2 <- c()
+for (i in c(1:5)) {
+  
+  actual <- exp(test.df.fin.2[,i])
+  predicted <- exp(pred.2[,i])
+  smape.val.2 <<- append(smape.val.2, smape(actual, predicted))
+  rmse.val.2 <<- append(rmse.val.2, rmse(actual, predicted))
+}
+
+stores <- c(44,45,47,3,49)
+val.2 <- data.frame(stores, smape.val.2, rmse.val.2)
+val.2
+```
+
+```{r}
+
+par(mfrow=c(2,1))
+
+ggplot(val.2, aes(x=as.character(stores), y=smape.val.2)) + geom_col() +
+  geom_text(aes(label = round(smape.val.2*100,2)), vjust = 1.5, colour = "white")
+
+
+ggplot(val.2, aes(x=as.character(stores), y=rmse.val.2)) + geom_col() +
+  geom_text(aes(label = round(rmse.val.2,2)), vjust = 1.5, colour = "white")
+```
+
+```{r}
+
+# Grouped Time Series 
+
+mod.group <- gts(train.df.fin)
+summary(mod.group)
+plot(mod.group)
+
+```
+
+```{r}
+fcst3 <- forecast(mod.group, method="bu", fmethod ="arima", h=10)
+plot(fcst3, include=10)
+
+pred.3 <- fcst3$bts
+smape.val.3 <- c()
+rmse.val.3 <- c()
+for (i in c(1:5)) {
+  
+  actual <- test.df.fin[,i]
+  predicted <- pred.3[,i]
+  smape.val.3 <<- append(smape.val.3, smape(actual, predicted))
+  rmse.val.3 <<- append(rmse.val.3, rmse(actual, predicted))
+}
+
+stores <- c(44,45,47,3,49)
+val.3 <- data.frame(stores, smape.val.3, rmse.val.3)
+val.3
+
+```
+
+```{r}
+par(mfrow=c(2,1))
+ggplot(val.3, aes(x=as.character(stores), y=smape.val.3)) + geom_col() +
+  geom_text(aes(label = round(smape.val.3*100,2)), vjust = 1.5, colour = "white")
+
+ggplot(val.3, aes(x=as.character(stores), y=rmse.val.3)) + geom_col() +
+  geom_text(aes(label = round(rmse.val.3,2)), vjust = 1.5, colour = "white")
+```

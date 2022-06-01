@@ -1,0 +1,211 @@
+---
+title: "Time Series Project Data Assembly & EDA"
+author: "Adhiraj Maheshwari Srivastava"
+date: "25/05/2022"
+output: html_document
+---
+
+This R Markdown consists of this projects EDA. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importing Libraries
+```{r}
+library(forecast)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+library(TSA)
+library(Metrics)
+library(tidyverse)
+library(lubridate)
+```
+
+## Reading in the Data
+```{r}
+wd <- getwd()
+wd <- substr(wd, 1, nchar(wd)-5)
+
+filePath <- paste(wd, "/Data/", sep="")
+df.Name <- "Final_Data.csv"
+holidays.Name <- "holidays_events.csv"
+
+df.group <- read.csv(paste(filePath, df.Name, sep=""))
+holidays.df <- read.csv(paste(filePath, holidays.Name, sep=""))
+```
+
+# EDA
+
+```{r}
+# number of stores: 54
+length(unique(df.group$store_nbr))
+
+#total number of sales: 1075377321
+sum(df.group$sales)
+
+#total number of transactions: 4683145203
+sum(df.group$transaction)
+
+#total number of promotions: 7845496
+sum(df.group$onpromotion)
+
+# average sales across all stores: 12848
+sales.all=round(mean(df.group$sales), digits = 0)
+sales.all
+
+# average number of promotions held across all stores: 94
+promotions.all=round(mean(df.group$onpromotion), digits = 0)
+promotions.all
+
+# average number of transactions across all stores: 55950
+transactions.all=round(mean(df.group$transaction), digits = 0)
+transactions.all
+
+# number of days for each stores
+print(paste("Number of Rows for Store 1:",nrow(df.group[df.group$store_nbr == 44,]), sep=" "))
+print(paste("Number of Rows for Store 2:", nrow(df.group[df.group$store_nbr == 45,]), sep=" "))
+print(paste("Number of Rows for Store 3:", nrow(df.group[df.group$store_nbr == 47,]), sep=" "))
+print(paste("Number of Rows for Store 4:", nrow(df.group[df.group$store_nbr == 3,]), sep=" "))
+print(paste("Number of Rows for Store 5:", nrow(df.group[df.group$store_nbr == 49,]), sep=" "))
+```
+
+## Visualizing each of the datasets 
+
+```{r}
+plot_data_44= filter(df.group, store_nbr==44)
+plot_data_45= filter(df.group, store_nbr==45)
+plot_data_47= filter(df.group, store_nbr==47)
+plot_data_3= filter(df.group, store_nbr==3)
+plot_data_49= filter(df.group, store_nbr==49)
+```
+
+```{r}
+ggplot(data=plot_data_44, aes(x=as.Date(date), y=sales, group=1)) +
+  geom_line()+
+  geom_point()
+
+ggplot(data=plot_data_45, aes(x=as.Date(date), y=sales, group=1)) +
+  geom_line()+
+  geom_point()
+
+ggplot(data=plot_data_47, aes(x=as.Date(date), y=sales, group=1)) +
+  geom_line()+
+  geom_point()
+
+ggplot(data=plot_data_3, aes(x=as.Date(date), y=sales, group=1)) +
+  geom_line()+
+  geom_point()
+
+ggplot(data=plot_data_49, aes(x=as.Date(date), y=sales, group=1)) +
+  geom_line()+
+  geom_point()
+```
+
+Plotting the transactions of the top 5 stores across time
+```{r}
+
+par(mfrow=c(5,1))
+
+ggplot(plot_data_44, aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 44")
+
+ggplot(plot_data_45, aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 45")
+
+ggplot(plot_data_47, aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 45")
+
+ggplot(plot_data_3, aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 3")
+
+ggplot(plot_data_49, aes(x = date, y = transaction, group=1)) +
+  geom_line() + labs(title="Transactions of Store 49")
+
+```
+
+```{r}
+#Setting up the legend for the graph
+colors <- c("Store44" = "blue", "Store45" = "red", "Store47" = "green", "Store3" = "purple" , "Store49" = "black")
+
+ggplot() + 
+  geom_line(data=plot_data_44, aes(x=date, y=sales, color = "Store44")) + 
+  geom_line(data=plot_data_45, aes(x=date, y=sales, color = "Store45")) +
+  geom_line(data=plot_data_47, aes(x=date, y=sales, color = "Store47")) +
+  geom_line(data=plot_data_3, aes(x=date, y=sales, color = "Store3")) +
+  geom_line(data=plot_data_49, aes(x=date, y=sales, color = "Store49")) +
+  labs(title="Sales for All Stores", x="Date", y="Sales", color="Legend")+scale_color_manual(values = colors)
+```
+
+```{r}
+#Setting up the legend for the graph
+colors <- c("Store44" = "blue", "Store45" = "red", "Store47" = "green", "Store3" = "purple" , "Store49" = "black")
+
+#Making the graph (Blue for male, and red for female):
+ggplot() + 
+  geom_line(data=plot_data_44, aes(x=date, y=transactions, color = "Store44")) + 
+  geom_line(data=plot_data_45, aes(x=date, y=transactions, color = "Store45")) +
+  geom_line(data=plot_data_47, aes(x=date, y=transactions, color = "Store47")) +
+  geom_line(data=plot_data_3, aes(x=date, y=transactions, color = "Store3")) +
+  geom_line(data=plot_data_49, aes(x=date, y=transactions, color = "Store49")) +
+  labs(title="Transactions for All Stores", x="Date", y="Transactions", color="Legend")+scale_color_manual(values = colors)
+```
+
+## Calculating basic facts for the top 5 stores
+```{r}
+# average sales across 5 stores: 31152
+sales.5=round(mean(df.group$sales), digits = 0)
+sales.5
+
+# average number of promotions held across 5 stores: 112
+promotions.5=round(mean(df.group$onpromotion), digits = 0)
+promotions.5
+
+# average number of transactions across 5 stores: 117964
+transactions.5=round(mean(df.group$transaction), digits = 0)
+transactions.5
+```
+
+Making a few comparison graphs for avg number sales, avg number, of promotions across stores and the avg number of transactions
+
+```{r}
+names=c('All Stores', 'Top 5 Stores in Sales')
+sales.comparison=c(sales.all, sales.5)
+transaction.comparison=c(transactions.all, transactions.5)
+promotion.comparison=c(promotions.all, promotions.5)
+```
+
+
+```{r}
+x1=barplot(sales.comparison, names.arg=names, xlab='Stores', ylab='Sales', ylim=c(0, 35000),
+        main='Average Number of Sales', col=c('#00203FFF', '#ADEFD1FF'), border = 'black')
+text(x1, sales.comparison+1500,labels=as.character(sales.comparison))
+
+
+x2=barplot(transaction.comparison, names.arg=names, xlab='Stores', ylab='Transactions', ylim=c(0, 130000),
+        main='Average Number of Transactions', col=c('#00A4CCFF', '#F95700FF'), border = 'black')
+text(x2, transaction.comparison+5000,labels=as.character(transaction.comparison))
+
+
+x3=barplot(promotion.comparison, names.arg=names, xlab='Stores', ylab='Promotions', ylim=c(0, 150),
+        main='Average Number of Promotions', col=c('#949398FF', '#F4DF4EFF'), border = 'black')
+text(x3, promotion.comparison+7,labels=as.character(promotion.comparison))
+```
+
+## Understanding the different types of holidays
+
+```{r}
+holiday_type_counts <- 
+  holidays.df %>%                              
+  group_by(locale) %>%
+  summarise(count = n_distinct(date))
+holiday_type_counts 
+```
+
+```{r}
+x=barplot(holiday_type_counts$count, names.arg=holiday_type_counts$locale, xlab='Type', ylab='Count', ylim=c(0, 250),
+        main='Type of Holidays', col=c('#567572FF', '#964F4CFF', '#696667FF'), border = 'black')
+text(x, holiday_type_counts$count+10,labels=as.character(holiday_type_counts$count))
+```
