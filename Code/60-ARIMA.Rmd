@@ -1,0 +1,103 @@
+---
+title: "ARIMA Modeling"
+author: "Adhiraj Maheshwari Srivastava"
+date: "26/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(forecast)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+library(TSA)
+library(Metrics)
+library(tidyverse)
+library(lubridate)
+library(RColorBrewer)
+library(xts)
+```
+
+
+Reading in the Data
+
+```{r}
+wd <- getwd()
+wd <- substr(wd, 1, nchar(wd)-5)
+
+filePath <- paste(wd, "/Data/", sep="")
+df.Name <- "Final_Data.csv"
+
+df.group <- read.csv(paste(filePath, df.Name, sep=""))
+
+```
+
+Have created a function below which filters the dataset for the store number that we enter and only selects the date and the sales columns. After this we aggregated the dataset on a weekly level, take the sum of the sales and convert this resultant dataset into a xts object. Next, we split the data into train and test. Test contains the last 10 rows.
+
+We fit an autoarima model on train, use it to predict the next 10 values. This is used to calculate the smape and rmse which are then added into lists.
+
+```{r}
+smape_lst=c()
+rmse_lst=c()
+
+my_function= function(storenumber, x=df.group){
+  
+  df=filter(x, store_nbr==as.integer(storenumber))
+  df= subset(df, select= c(1,3))
+  df_xts=apply.weekly(as.xts(df$sales, order.by=as.Date(df$date)), 'sum')
+  train=df_xts["/2017-06-11"]
+  test=df_xts["2017-06-18/"]
+  my_model=auto.arima(train)
+  print(summary(my_model))
+  y.pred = forecast(my_model, h=10)$mean
+  a=smape(test, y.pred)
+  b=rmse(test, y.pred)
+  print(paste('smape:', a, 'rmse:', b))
+  smape_lst<<-c(smape_lst, a)
+  rmse_lst<<-c(rmse_lst, b)
+  
+}
+```
+
+We run the function for all of our stores in the storenumber_lst
+```{r}
+storenumber_lst=c(44, 45, 47, 3, 49)
+
+for (i in storenumber_lst) {
+  my_function(i)
+}
+```
+
+Combining the results of all the models, the RMSE and sMAPE values in a data frame
+```{r}
+my_data <- data.frame(storenumber_lst, rmse_lst, smape_lst)
+my_data
+```
+
+Plotting graphs for the different RMSE and sMAPE values for the models for each of the stores
+```{r}
+coul = brewer.pal(5, "BuGn") 
+x_RMSE=barplot(my_data$rmse_lst, names.arg=my_data$storenumber_lst, xlab='Store', ylab='RMSE',col=coul)
+x_RMSE
+#text(x, holiday_type_counts$count+10,labels=as.character(holiday_type_counts$count))
+x_sMAPE=barplot(my_data$smape_lst, names.arg=my_data$storenumber_lst, xlab='Store', ylab='sMAPE',col=coul)
+x_sMAPE
+```
+
+Plotting the forecast for Store 49, the store which gives us the least RMSE value
+```{r}
+plotdf= filter(df.group, store_nbr==49)
+plotdf= subset(plotdf, select= c(1,3))
+plotdf_xts=apply.weekly(as.xts(plotdf$sales, order.by=as.Date(plotdf$date)), 'sum')
+plot.train=plotdf_xts["/2017-06-11"]
+plot.test=plotdf_xts["2017-06-18/"]
+my_model=auto.arima(plot.train)
+y.pred = forecast(my_model, h=10)
+autoplot(y.pred, ylab="Store Sales")
+```

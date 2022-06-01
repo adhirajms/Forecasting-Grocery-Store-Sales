@@ -1,0 +1,570 @@
+---
+title: "Prophet Modelling Final Project"
+author: "Aman Gupta"
+date: "5/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# PROPEHT Model
+
+```{r}
+library(forecast)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+library(prophet)
+library(tseries)
+library(TSstudio)
+library(xts)
+library(TSA)
+```
+
+```{r}
+wd <- getwd() 
+wd <- substr(wd, 1, nchar(wd)-5)
+filePath <- paste(wd, "/Data/", sep="")
+
+df.Name <- "Final_Data.csv"
+
+df.group <- read.csv(paste(filePath, df.Name, sep=""))
+```
+
+### Looking at stores 3, 44, 45, 47, 49
+
+### Using Prophet for each store - Store 1 aka store_nbr = 3 
+
+```{r}
+df.group$date <- as.Date(df.group$date, format= "%Y-%m-%d")
+df.store.3 <- filter(df.group, store_nbr == "3")
+df.store.3.train <- subset(df.store.3, date >= "2013-01-02" & date <= "2017-07-31")
+df.store.3.test <- subset(df.store.3, date > "2017-07-31")
+```
+
+
+```{r}
+prophet.holidays <- subset(holidays.df, select = c("date","description"))
+names(prophet.holidays) <- c('ds','holiday')
+prophet.holidays$ds <- as.Date(prophet.holidays$ds, format= "%Y-%m-%d")
+df.store.3.train.prophet <- subset(df.store.3.train, select = c("date","sales"))
+names(df.store.3.train.prophet) <-c('ds','y')
+m.store.3 <- prophet(df.store.3.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.3 <- make_future_dataframe(m.store.3, periods = 15)
+forecast <- predict(m.store.3, future.store.3)
+
+```
+
+```{r}
+plot(m.store.3, forecast)
+```
+
+```{r}
+prophet_plot_components(m.store.3, forecast)
+```
+
+```{r}
+df.cv.3 <- cross_validation(m.store.3, initial = 730, period = 365, horizon = 30, units = 'days')
+df.p.3 <- performance_metrics(df.cv.3)
+```
+
+```{r}
+head(df.p.3)
+```
+
+```{r}
+prophet.results <- data.frame(store = c('Store 3'), mean_rmse = c(mean(df.p.3$rmse)), mean_smape = c(mean(df.p.3$smape)))
+```
+
+
+### STORE 44 
+
+```{r}
+df.group$date <- as.Date(df.group$date, format= "%Y-%m-%d")
+df.store.44 <- filter(df.group, store_nbr == "44")
+df.store.44.train <- subset(df.store.44, date >= "2013-01-02" & date <= "2017-07-31")
+df.store.44.test <- subset(df.store.44, date > "2017-07-31")
+```
+
+
+```{r}
+df.store.44.train.prophet <- subset(df.store.44.train, select = c("date","sales"))
+names(df.store.44.train.prophet) <-c('ds','y')
+m.store.44 <- prophet(df.store.44.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.44 <- make_future_dataframe(m.store.44, periods = 15)
+forecast <- predict(m.store.44, future.store.44)
+
+```
+
+```{r}
+plot(m.store.44, forecast)
+```
+
+```{r}
+prophet_plot_components(m.store.44, forecast)
+```
+
+```{r}
+df.cv.44 <- cross_validation(m.store.44, initial = 730, period = 365, horizon = 30, units = 'days')
+df.p.44 <- performance_metrics(df.cv.44)
+```
+
+```{r}
+head(df.p.44)
+```
+
+```{r}
+prophet.results[nrow(prophet.results) + 1,] = list("Store 44",mean(df.p.44$rmse),mean(df.p.44$smape) )
+
+```
+
+
+### Store 45 
+
+```{r}
+df.group$date <- as.Date(df.group$date, format= "%Y-%m-%d")
+df.store.45 <- filter(df.group, store_nbr == "45")
+df.store.45.train <- subset(df.store.45, date >= "2013-01-02" & date <= "2017-07-31")
+df.store.45.test <- subset(df.store.45, date > "2017-07-31")
+```
+
+```{r}
+df.store.45.train.prophet <- subset(df.store.45.train, select = c("date","sales"))
+names(df.store.45.train.prophet) <-c('ds','y')
+m.store.45 <- prophet(df.store.45.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.45 <- make_future_dataframe(m.store.45, periods = 15)
+forecast <- predict(m.store.45, future.store.45)
+```
+
+```{r}
+plot(m.store.45, forecast)
+```
+
+```{r}
+prophet_plot_components(m.store.45, forecast)
+```
+
+```{r}
+df.cv.45 <- cross_validation(m.store.45, initial = 730, period = 365, horizon = 30, units = 'days')
+df.p.45 <- performance_metrics(df.cv.45)
+```
+
+```{r}
+head(df.p.45)
+```
+
+```{r}
+prophet.results[nrow(prophet.results) + 1,] = list("Store 45",mean(df.p.45$rmse),mean(df.p.45$smape) )
+
+```
+
+
+### STORE 47 
+
+```{r}
+df.group$date <- as.Date(df.group$date, format= "%Y-%m-%d")
+df.store.47 <- filter(df.group, store_nbr == "47")
+df.store.47.train <- subset(df.store.47, date >= "2013-01-02" & date <= "2017-07-31")
+df.store.47.test <- subset(df.store.47, date > "2017-07-31")
+```
+
+```{r}
+df.store.47.train.prophet <- subset(df.store.47.train, select = c("date","sales"))
+names(df.store.47.train.prophet) <-c('ds','y')
+m.store.47 <- prophet(df.store.47.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.47 <- make_future_dataframe(m.store.47, periods = 15)
+forecast <- predict(m.store.47, future.store.47)
+
+```
+
+```{r}
+plot(m.store.47, forecast)
+```
+
+```{r}
+prophet_plot_components(m.store.47, forecast)
+```
+
+```{r}
+df.cv.47 <- cross_validation(m.store.47, initial = 730, period = 365, horizon = 30, units = 'days')
+df.p.47 <- performance_metrics(df.cv.47)
+```
+
+```{r}
+head(df.p.47)
+```
+
+```{r}
+prophet.results[nrow(prophet.results) + 1,] = list("Store 47",mean(df.p.47$rmse),mean(df.p.47$smape) )
+
+```
+
+
+### STORE 49 
+
+
+```{r}
+df.group$date <- as.Date(df.group$date, format= "%Y-%m-%d")
+df.store.49 <- filter(df.group, store_nbr == "49")
+df.store.49.train <- subset(df.store.49, date >= "2013-01-02" & date <= "2017-07-31")
+df.store.49.test <- subset(df.store.49, date > "2017-07-31")
+```
+
+```{r}
+df.store.49.train.prophet <- subset(df.store.49.train, select = c("date","sales"))
+names(df.store.49.train.prophet) <-c('ds','y')
+m.store.49 <- prophet(df.store.49.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.49 <- make_future_dataframe(m.store.49, periods = 15)
+forecast <- predict(m.store.49, future.store.49)
+
+```
+
+```{r}
+plot(m.store.49, forecast)
+```
+
+```{r}
+prophet_plot_components(m.store.49, forecast)
+```
+
+```{r}
+df.cv.49 <- cross_validation(m.store.49, initial = 730, period = 365, horizon = 30, units = 'days')
+df.p.49 <- performance_metrics(df.cv.49)
+```
+
+```{r}
+head(df.p.49)
+```
+
+```{r}
+prophet.results[nrow(prophet.results) + 1,] = list("Store 49",mean(df.p.49$rmse),mean(df.p.49$smape) )
+
+```
+
+
+### AGGREGATING WEEKLY PER STORE- STORE 49 
+
+```{r}
+df.store.49.xts <- as.xts(df.store.49$sales,order.by=as.Date(df.store.49$date))
+weekly.store.49 <- apply.weekly(df.store.49.xts,'sum')
+```
+
+```{r}
+plot(weekly.store.49)
+```
+
+```{r}
+acf(weekly.store.49)
+```
+
+```{r}
+
+#df.store.49.weekly.train <- subset(weekly.store.49, date >= "2013-01-02" & date <= "2017-07-31")
+#df.store.49.weekly.test <- subset(weekly.store.49, date > "2017-07-31")
+
+df.store.49.weekly.train <- weekly.store.49["2013/201612",]
+df.store.49.weekly.test <- weekly.store.49["2017",]
+```
+
+```{r}
+library(TSstudio)
+df.store.49.weekly.train.prophet <- ts_to_prophet(df.store.49.weekly.train)
+#names(df.store.49.train.prophet) <-c('ds','y')
+m.store.49.weekly <- prophet(df.store.49.weekly.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.weekly.49 <- make_future_dataframe(m.store.49.weekly, periods = 33)
+forecast <- predict(m.store.49.weekly, future.store.weekly.49)
+
+```
+
+```{r}
+plot(m.store.49.weekly, forecast)
+```
+
+```{r}
+prophet_plot_components(m.store.49.weekly, forecast)
+```
+
+```{r}
+df.cv.weekly.49 <- cross_validation(m.store.49.weekly, initial = 53, period = 53, horizon = 53, units = 'weeks')
+df.p.weekly.49 <- performance_metrics(df.cv.weekly.49)
+```
+
+```{r}
+head(df.p.weekly.49)
+```
+
+```{r}
+prophet.weekly.results <- data.frame(store = c('Store 49'), mean_rmse = c(mean(df.p.weekly.49$rmse)), mean_smape = c(mean(df.p.weekly.49$smape)))
+```
+
+
+### END OF STORE 49 
+
+
+### START OF STORE 47 
+
+```{r}
+df.store.47.xts <- as.xts(df.store.47$sales,order.by=as.Date(df.store.47$date))
+weekly.store.47 <- apply.weekly(df.store.47.xts,'sum')
+```
+
+
+```{r}
+plot(weekly.store.47)
+```
+
+
+```{r}
+
+#df.store.49.weekly.train <- subset(weekly.store.49, date >= "2013-01-02" & date <= "2017-07-31")
+#df.store.49.weekly.test <- subset(weekly.store.49, date > "2017-07-31")
+
+df.store.47.weekly.train <- weekly.store.47["2013/201612",]
+df.store.47.weekly.test <- weekly.store.47["2017",]
+```
+
+
+```{r}
+library(TSstudio)
+df.store.47.weekly.train.prophet <- ts_to_prophet(df.store.47.weekly.train)
+#names(df.store.49.train.prophet) <-c('ds','y')
+m.store.47.weekly <- prophet(df.store.47.weekly.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.weekly.47 <- make_future_dataframe(m.store.47.weekly, periods = 33)
+forecast <- predict(m.store.47.weekly, future.store.weekly.47)
+
+```
+
+```{r}
+plot(m.store.47.weekly, forecast,ylabel='Sales',xlabel='Time')
+#title('Aggregated Sales Forecast for Store 47 using Prophet')
+```
+
+```{r}
+prophet_plot_components(m.store.47.weekly, forecast)
+```
+
+```{r}
+df.cv.weekly.47 <- cross_validation(m.store.47.weekly, initial = 53, period = 53, horizon = 53, units = 'weeks')
+df.p.weekly.47 <- performance_metrics(df.cv.weekly.47)
+```
+
+```{r}
+head(df.p.weekly.47)
+```
+
+```{r}
+prophet.weekly.results[nrow(prophet.weekly.results) + 1,] = list("Store 47",mean(df.p.weekly.47$rmse),mean(df.p.weekly.47$smape) )
+```
+
+### END OF STORE 47 
+
+
+### Start of store 45 
+
+```{r}
+df.store.45.xts <- as.xts(df.store.45$sales,order.by=as.Date(df.store.45$date))
+weekly.store.45 <- apply.weekly(df.store.45.xts,'sum')
+```
+
+
+```{r}
+plot(weekly.store.45)
+```
+
+
+```{r}
+
+#df.store.49.weekly.train <- subset(weekly.store.49, date >= "2013-01-02" & date <= "2017-07-31")
+#df.store.49.weekly.test <- subset(weekly.store.49, date > "2017-07-31")
+
+df.store.45.weekly.train <- weekly.store.45["2013/201612",]
+df.store.45.weekly.test <- weekly.store.45["2017",]
+```
+
+
+```{r}
+library(TSstudio)
+df.store.45.weekly.train.prophet <- ts_to_prophet(df.store.45.weekly.train)
+#names(df.store.49.train.prophet) <-c('ds','y')
+m.store.45.weekly <- prophet(df.store.45.weekly.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.weekly.45 <- make_future_dataframe(m.store.45.weekly, periods = 33)
+forecast <- predict(m.store.45.weekly, future.store.weekly.45)
+
+```
+
+```{r}
+plot(m.store.45.weekly, forecast,ylabel='Sales',xlabel='Time')
+#title('Aggregated Sales Forecast for Store 47 using Prophet')
+```
+
+```{r}
+prophet_plot_components(m.store.45.weekly, forecast)
+```
+
+```{r}
+df.cv.weekly.45 <- cross_validation(m.store.45.weekly, initial = 53, period = 53, horizon = 53, units = 'weeks')
+df.p.weekly.45 <- performance_metrics(df.cv.weekly.45)
+```
+
+```{r}
+head(df.p.weekly.45)
+```
+
+```{r}
+prophet.weekly.results[nrow(prophet.weekly.results) + 1,] = list("Store 45",mean(df.p.weekly.45$rmse),mean(df.p.weekly.45$smape) )
+```
+
+
+### END OF STORE 45 
+
+
+### Start of store 44 
+
+```{r}
+df.store.44.xts <- as.xts(df.store.44$sales,order.by=as.Date(df.store.44$date))
+weekly.store.44 <- apply.weekly(df.store.44.xts,'sum')
+```
+
+
+```{r}
+plot(weekly.store.44)
+```
+
+
+```{r}
+
+#df.store.49.weekly.train <- subset(weekly.store.49, date >= "2013-01-02" & date <= "2017-07-31")
+#df.store.49.weekly.test <- subset(weekly.store.49, date > "2017-07-31")
+
+df.store.44.weekly.train <- weekly.store.44["2013/201612",]
+df.store.44.weekly.test <- weekly.store.44["2017",]
+```
+
+
+```{r}
+library(TSstudio)
+df.store.44.weekly.train.prophet <- ts_to_prophet(df.store.44.weekly.train)
+#names(df.store.49.train.prophet) <-c('ds','y')
+m.store.44.weekly <- prophet(df.store.44.weekly.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.weekly.44 <- make_future_dataframe(m.store.44.weekly, periods = 33)
+forecast <- predict(m.store.44.weekly, future.store.weekly.44)
+
+```
+
+```{r}
+plot(m.store.44.weekly, forecast,ylabel='Sales',xlabel='Time')
+#title('Aggregated Sales Forecast for Store 47 using Prophet')
+```
+
+```{r}
+prophet_plot_components(m.store.44.weekly, forecast)
+```
+
+```{r}
+df.cv.weekly.44 <- cross_validation(m.store.44.weekly, initial = 53, period = 53, horizon = 53, units = 'weeks')
+df.p.weekly.44 <- performance_metrics(df.cv.weekly.44)
+```
+
+```{r}
+head(df.p.weekly.44)
+```
+
+```{r}
+prophet.weekly.results[nrow(prophet.weekly.results) + 1,] = list("Store 44",mean(df.p.weekly.44$rmse),mean(df.p.weekly.44$smape) )
+```
+
+
+### END OF STORE 44 
+
+### START OF STORE 3 
+
+
+
+```{r}
+df.store.3.xts <- as.xts(df.store.3$sales,order.by=as.Date(df.store.3$date))
+weekly.store.3 <- apply.weekly(df.store.3.xts,'sum')
+```
+
+
+```{r}
+plot(weekly.store.3)
+```
+
+
+```{r}
+
+#df.store.49.weekly.train <- subset(weekly.store.49, date >= "2013-01-02" & date <= "2017-07-31")
+#df.store.49.weekly.test <- subset(weekly.store.49, date > "2017-07-31")
+
+df.store.3.weekly.train <- weekly.store.3["2013/201612",]
+df.store.3.weekly.test <- weekly.store.3["2017",]
+```
+
+
+```{r}
+df.store.3.weekly.train.prophet <- ts_to_prophet(df.store.3.weekly.train)
+#names(df.store.49.train.prophet) <-c('ds','y')
+m.store.3.weekly <- prophet(df.store.3.weekly.train.prophet, holidays = prophet.holidays)
+```
+
+```{r}
+future.store.weekly.3 <- make_future_dataframe(m.store.3.weekly, periods = 33)
+forecast <- predict(m.store.3.weekly, future.store.weekly.3)
+
+```
+
+```{r}
+plot(m.store.3.weekly, forecast,ylabel='Sales',xlabel='Time')
+#title('Aggregated Sales Forecast for Store 47 using Prophet')
+```
+
+```{r}
+prophet_plot_components(m.store.3.weekly, forecast)
+```
+
+```{r}
+df.cv.weekly.3 <- cross_validation(m.store.3.weekly, initial = 53, period = 53, horizon = 53, units = 'weeks')
+df.p.weekly.3 <- performance_metrics(df.cv.weekly.3)
+```
+
+```{r}
+head(df.p.weekly.3)
+```
+
+```{r}
+prophet.weekly.results[nrow(prophet.weekly.results) + 1,] = list("Store 3",mean(df.p.weekly.3$rmse),mean(df.p.weekly.3$smape) )
+```
+
+
+
+

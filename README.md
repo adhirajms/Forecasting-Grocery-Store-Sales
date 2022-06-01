@@ -3,10 +3,9 @@
 # Forecasting Store Sales in Ecuador 
 This project is a part of the Time Series Forecasting Class at the University of Chicago's Master in Science in Analytics Program.  
 
-#### -- Project Status: [Active]
 
 ## Project Intro/Objective
-The purpose of this project is to forecast the sales of multiple Favorita stores located in Ecuador. The end goal is to be able to accurately predict sales, in order to help Favorita better decisions around which stores are working, which ones need help and need to dive further in etc. 
+The purpose of this project is to forecast the sales of multiple Favorita stores located in Ecuador. The end goal is to be able to accurately predict sales, in order to help Favorita make better decisions around the amount of inventory to buy for each store to decrease waste and increase customer satisfaction. 
 
 
 ### Methods Used
@@ -20,46 +19,33 @@ The purpose of this project is to forecast the sales of multiple Favorita stores
 * R 
 * Excel
 
-## Project Description
-(Provide more detailed overview of the project.  Talk a bit about your data sources and what questions and hypothesis you are exploring. What specific data analysis/visualization and modelling work are you using to solve the problem? What blockers and challenges are you facing?  Feel free to number or bullet point things here)
+## Dataset
+The dataset, with more information can be found on kaggle, linked [here](https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data?select=oil.csv) 
 
-## Needs of this project
+The dataset includes daily data from 2013-01-01 to 2017-08-15
 
-- frontend developers
-- data exploration/descriptive statistics
-- data processing/cleaning
-- statistical modeling
-- writeup/reporting
-- etc. (be as specific as possible)
+There are multiple datasets as part of this project (all can be found in the /Data folder):
+- train.csv: daily data for each store, product family, dollar value of sales, and promotion data
+- oil.csv: daily data for oil prices 
+- holidays_events.csv: data about when a holiday/event happened and whether it was a local, regional or national event. 
+- stores.csv: meta data around each stores
+- transactions.csv: daily data for each store, product family, and the number of transactions. 
 
-## Getting Started
 
-1. Clone this repo (for help see this [tutorial](https://help.github.com/articles/cloning-a-repository/)).
-2. Raw Data is being kept [here](Repo folder containing raw data) within this repo.
+## Methodology
 
-    *If using offline data mention that and how they may obtain the data from the froup)*
-    
-3. Data processing/transformation scripts are being kept [here](Repo folder containing data processing scripts/notebooks)
-4. etc...
-
-*If your project is well underway and setup is fairly complicated (ie. requires installation of many packages) create another "setup.md" file and link to it here*  
-
-5. Follow setup [instructions](Link to file)
-
-## Featured Notebooks/Analysis/Deliverables
-* [Notebook/Markdown/Slide Deck Title](link)
-* [Notebook/Markdown/Slide DeckTitle](link)
-* [Blog Post](link)
+For this analysis we narrowed our scope to just the top 5 stores by sales. We used 4 different time series models to predict the weekly sales:
+- ARIMA
+- Dynamic Regression 
+- Prophet 
+- Hierarihcal TS Modeling 
 
 
 ## Contributing Members
 
-|Name     |  Slack Handle   | 
+|Name     |  GitHub Handle   | 
 |---------|-----------------|
 |[Priyank Shroff](https://github.com/[shroffp05])| @shroffp05        |
-|[Aman Gupta](https://github.com/[]) |     @janeDoe    |
+|[Aman Gupta](https://github.com/[aman-221]) |     @aman-221    |
 |[Michelle Tang](https://github.com/[michelle-h-tang])| @michelle-h-tang        |
 |[Adhiraj M Srivastava](https://github.com/[adhirajms]) |     @adhirajms   |
-
-
-## Contact
