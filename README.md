@@ -1,6 +1,6 @@
 # Forecasting Sales of Grocery Stores in Ecuador
 
-This project is a part of the Time Series Forecasting Class at the University of Chicago's Master in Science in Analytics Program.  
+This project is a part of the Time Series Forecasting (MScA 31006) Class at the University of Chicago's Master in Science in Analytics Program.  
 
 
 ## Project Intro/Objective
