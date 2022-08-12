@@ -1,6 +1,5 @@
-# msca-31006-time-series-forecasting-project
+# Forecasting Sales of Grocery Stores in Ecuador
 
-# Forecasting Store Sales in Ecuador 
 This project is a part of the Time Series Forecasting Class at the University of Chicago's Master in Science in Analytics Program.  
 
 
