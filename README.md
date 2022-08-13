@@ -1,10 +1,10 @@
 # Forecasting Sales of Grocery Stores in Ecuador
 
-This project is a part of the Time Series Forecasting (MScA 31006) Class at the University of Chicago's Master in Science in Analytics Program.  
+This project is a part of the Time Series Forecasting (MScA 31006) Course at the University of Chicago's Master's of Science in Analytics Program.  
 
 
 ## Project Intro/Objective
-The purpose of this project is to forecast the sales of multiple Favorita stores located in Ecuador. The end goal is to be able to accurately predict sales, in order to help Favorita make better decisions around the amount of inventory to buy for each store to decrease waste and increase customer satisfaction. 
+The purpose of this project is to forecast the sales of multiple Favorita stores located in Ecuador. The end goal is to be able to accurately predict sales in order to help Favorita make better decisions around the amount of inventory to buy for each store to decrease waste and increase customer satisfaction. 
 
 
 ### Methods Used
@@ -19,7 +19,7 @@ The purpose of this project is to forecast the sales of multiple Favorita stores
 * Excel
 
 ## Dataset
-The dataset, with more information can be found on kaggle, linked [here](https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data?select=oil.csv) 
+The dataset, with more information can be found on kaggle, linked [here](https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data?select=oil.csv). 
 
 The dataset includes daily data from 2013-01-01 to 2017-08-15
 
